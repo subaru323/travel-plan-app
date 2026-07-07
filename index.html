@@ -1,0 +1,461 @@
+<!DOCTYPE html>
+<html lang="ja">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=1.0, user-scalable=no">
+<title>Tabily — みんなの旅プラン</title>
+<style>
+  :root{
+    --bg:#0a0b14; --app:#0e1020; --surface:#171a2e; --surface2:#1f2340;
+    --line:rgba(255,255,255,.07); --line2:rgba(255,255,255,.12);
+    --txt:#f2f4ff; --sub:#8b91bd; --dim:#5b6090;
+    --grad1:#7c5cff; --grad2:#4d8bff; --mint:#3fe0c5; --rose:#ff6b8a;
+    --amber:#ffcb6b; --ok:#46e0a0;
+    --r:22px; --r-sm:14px;
+    --shadow:0 20px 50px -20px rgba(0,0,0,.7);
+  }
+  *{box-sizing:border-box; -webkit-tap-highlight-color:transparent;}
+  html,body{margin:0; height:100%;}
+  body{
+    font-family:-apple-system,BlinkMacSystemFont,"Hiragino Sans","Yu Gothic UI",sans-serif;
+    background:
+      radial-gradient(900px 500px at 15% -8%, rgba(124,92,255,.25), transparent 60%),
+      radial-gradient(800px 500px at 100% 0%, rgba(77,139,255,.18), transparent 55%),
+      var(--bg);
+    color:var(--txt); -webkit-font-smoothing:antialiased;
+    display:flex; align-items:center; justify-content:center; min-height:100%;
+    padding:24px 0;
+  }
+  /* ===== phone frame ===== */
+  .phone{
+    width:390px; max-width:100vw; height:844px; max-height:96vh;
+    background:var(--app); border-radius:46px; position:relative; overflow:hidden;
+    box-shadow:var(--shadow), 0 0 0 11px #05060c, 0 0 0 13px #1b1d2e;
+  }
+  @media(max-width:430px){ body{padding:0;} .phone{border-radius:0; height:100vh; max-height:100vh; box-shadow:none; width:100vw;} }
+  .notch{position:absolute; top:0; left:50%; transform:translateX(-50%); width:130px; height:30px;
+    background:#05060c; border-radius:0 0 18px 18px; z-index:50;}
+  .statusbar{position:absolute; top:0; left:0; right:0; height:54px; display:flex; align-items:center;
+    justify-content:space-between; padding:14px 28px 0; font-size:.78rem; font-weight:600; z-index:40; pointer-events:none;}
+  .statusbar .dots{letter-spacing:1px;}
+
+  .screen{position:absolute; inset:0; padding-top:54px; display:flex; flex-direction:column; overflow:hidden;}
+  .scroll{flex:1; overflow-y:auto; padding:8px 22px 120px; -webkit-overflow-scrolling:touch;}
+  .scroll::-webkit-scrollbar{width:0;}
+
+  /* ===== header ===== */
+  .brand{display:flex; align-items:center; gap:10px; padding:6px 0 14px;}
+  .logo{width:34px; height:34px; border-radius:11px; background:linear-gradient(135deg,var(--grad1),var(--grad2));
+    display:grid; place-items:center; font-size:18px; box-shadow:0 6px 16px -4px var(--grad1);}
+  .brand h1{font-size:1.15rem; margin:0; letter-spacing:.01em;}
+  .brand .sub{font-size:.7rem; color:var(--sub); margin-top:1px;}
+
+  /* progress steps */
+  .steps{display:flex; gap:6px; margin:4px 0 18px;}
+  .steps .s{flex:1; height:4px; border-radius:99px; background:var(--surface2); overflow:hidden;}
+  .steps .s.on{background:linear-gradient(90deg,var(--grad1),var(--grad2));}
+
+  .eyebrow{font-size:.74rem; color:var(--mint); font-weight:700; letter-spacing:.08em; text-transform:uppercase; margin:0 0 6px;}
+  .qtitle{font-size:1.45rem; font-weight:700; line-height:1.3; margin:0 0 4px;}
+  .qhint{font-size:.82rem; color:var(--sub); margin:0 0 22px; line-height:1.5;}
+
+  /* segmented / chips */
+  .seg{display:grid; gap:10px;}
+  .seg.cols2{grid-template-columns:1fr 1fr;}
+  .opt{position:relative; background:var(--surface); border:1.5px solid var(--line); border-radius:var(--r-sm);
+    padding:16px; cursor:pointer; transition:.18s; display:flex; align-items:center; gap:12px;}
+  .opt:active{transform:scale(.98);}
+  .opt .ic{font-size:22px; width:40px; height:40px; border-radius:11px; background:var(--surface2);
+    display:grid; place-items:center; flex:0 0 auto;}
+  .opt .tx .t{font-weight:600; font-size:.96rem;}
+  .opt .tx .d{font-size:.74rem; color:var(--sub); margin-top:2px;}
+  .opt.sel{border-color:var(--grad2); background:linear-gradient(135deg, rgba(124,92,255,.18), rgba(77,139,255,.1));}
+  .opt.sel .ic{background:linear-gradient(135deg,var(--grad1),var(--grad2));}
+  .opt .check{position:absolute; top:12px; right:12px; width:20px; height:20px; border-radius:50%;
+    border:1.5px solid var(--line2); display:grid; place-items:center; font-size:11px; color:#fff; opacity:0; transition:.18s;}
+  .opt.sel .check{opacity:1; background:var(--grad2); border-color:var(--grad2);}
+
+  /* number / budget */
+  .budget-display{text-align:center; padding:8px 0 4px;}
+  .budget-display .amt{font-size:2.6rem; font-weight:800; letter-spacing:-.02em;
+    background:linear-gradient(135deg,#fff,var(--mint)); -webkit-background-clip:text; background-clip:text; -webkit-text-fill-color:transparent;}
+  .budget-display .per{font-size:.78rem; color:var(--sub);}
+  input[type=range]{-webkit-appearance:none; width:100%; height:6px; border-radius:99px; margin:18px 0 6px;
+    background:linear-gradient(90deg,var(--grad1),var(--grad2)) no-repeat; background-size:var(--fill,50%) 100%;
+    background-color:var(--surface2);}
+  input[type=range]::-webkit-slider-thumb{-webkit-appearance:none; width:26px; height:26px; border-radius:50%;
+    background:#fff; box-shadow:0 4px 12px rgba(0,0,0,.4), 0 0 0 4px rgba(124,92,255,.3); cursor:grab;}
+  .range-ends{display:flex; justify-content:space-between; font-size:.72rem; color:var(--dim);}
+
+  /* members */
+  .member{background:var(--surface); border:1px solid var(--line); border-radius:var(--r-sm);
+    padding:12px; margin-bottom:10px; display:flex; align-items:center; gap:10px;}
+  .avatar{width:38px; height:38px; border-radius:50%; flex:0 0 auto; display:grid; place-items:center;
+    font-weight:700; color:#fff; font-size:.9rem;}
+  .member .f{flex:1; min-width:0;}
+  .member input.nm{background:transparent; border:none; color:var(--txt); font-size:.95rem; font-weight:600; width:100%; outline:none; padding:0;}
+  .member .city{display:flex; align-items:center; gap:5px; font-size:.76rem; color:var(--sub); margin-top:2px;}
+  .member select{background:var(--surface2); border:1px solid var(--line); color:var(--txt); border-radius:8px;
+    padding:4px 6px; font-size:.76rem; outline:none;}
+  .member .del{color:var(--dim); background:none; border:none; font-size:18px; cursor:pointer; padding:4px;}
+  .add-m{width:100%; border:1.5px dashed var(--line2); background:transparent; color:var(--sub);
+    border-radius:var(--r-sm); padding:13px; font-size:.9rem; cursor:pointer; font-weight:600;}
+  .add-m:active{transform:scale(.98);}
+
+  /* bottom CTA */
+  .footer-cta{position:absolute; left:0; right:0; bottom:0; padding:14px 22px 30px;
+    background:linear-gradient(to top, var(--app) 55%, transparent); z-index:30;}
+  .btn{width:100%; border:none; border-radius:16px; padding:17px; font-size:1.02rem; font-weight:700;
+    cursor:pointer; transition:.16s; font-family:inherit;}
+  .btn:active{transform:scale(.98);}
+  .btn-primary{background:linear-gradient(135deg,var(--grad1),var(--grad2)); color:#fff;
+    box-shadow:0 12px 28px -8px var(--grad1);}
+  .btn-primary:disabled{opacity:.4; box-shadow:none;}
+  .btn-row{display:flex; gap:10px;}
+  .btn-ghost{background:var(--surface2); color:var(--txt); flex:0 0 auto; width:56px; display:grid; place-items:center; font-size:1.2rem; border-radius:16px;}
+
+  .nav-back{position:absolute; top:60px; left:18px; z-index:45; width:38px; height:38px; border-radius:50%;
+    background:rgba(20,22,40,.7); backdrop-filter:blur(8px); border:1px solid var(--line); color:var(--txt);
+    font-size:18px; cursor:pointer; display:none; align-items:center; justify-content:center;}
+
+  /* ===== loading ===== */
+  #loading{position:absolute; inset:0; background:var(--app); z-index:60; display:none;
+    flex-direction:column; align-items:center; justify-content:center; gap:24px; padding:40px;}
+  .orbit{width:90px; height:90px; position:relative;}
+  .orbit .core{position:absolute; inset:30px; border-radius:50%;
+    background:linear-gradient(135deg,var(--grad1),var(--grad2)); animation:pulse 1.4s ease-in-out infinite;}
+  .orbit .ring{position:absolute; inset:0; border-radius:50%; border:2px solid transparent;
+    border-top-color:var(--mint); border-right-color:var(--grad2); animation:spin 1s linear infinite;}
+  @keyframes spin{to{transform:rotate(360deg);}}
+  @keyframes pulse{0%,100%{transform:scale(.85); opacity:.8;}50%{transform:scale(1.05); opacity:1;}}
+  #loading .lt{font-weight:700; font-size:1.05rem;}
+  #loading .ls{font-size:.82rem; color:var(--sub); height:20px; transition:.3s;}
+
+  /* ===== result ===== */
+  .hero{position:relative; margin:-8px -22px 0; padding:26px 22px 22px; overflow:hidden;
+    background:linear-gradient(135deg,var(--grad1),var(--grad2));}
+  .hero::after{content:""; position:absolute; right:-30px; top:-30px; width:160px; height:160px; border-radius:50%;
+    background:rgba(255,255,255,.12);}
+  .hero .dest{font-size:1.7rem; font-weight:800; margin:0;}
+  .hero .meta{font-size:.84rem; opacity:.9; margin-top:4px;}
+  .hero .pills{display:flex; gap:8px; margin-top:14px; flex-wrap:wrap;}
+  .hero .pill{background:rgba(255,255,255,.16); backdrop-filter:blur(4px); border-radius:99px;
+    padding:6px 12px; font-size:.76rem; font-weight:600;}
+
+  .stat-row{display:flex; gap:10px; margin:16px 0;}
+  .scard{flex:1; background:var(--surface); border:1px solid var(--line); border-radius:var(--r-sm); padding:13px;}
+  .scard .v{font-size:1.15rem; font-weight:800;}
+  .scard .l{font-size:.68rem; color:var(--sub); margin-top:3px; line-height:1.3;}
+  .scard.alert{border-color:rgba(255,107,138,.4); background:rgba(255,107,138,.08);} .scard.alert .v{color:var(--rose);}
+  .scard.good{border-color:rgba(70,224,160,.35); background:rgba(70,224,160,.07);} .scard.good .v{color:var(--ok);}
+
+  .panel{background:var(--surface); border:1px solid var(--line); border-radius:var(--r-sm); padding:16px; margin-bottom:14px;}
+  .panel h4{margin:0 0 10px; font-size:.9rem; display:flex; align-items:center; gap:7px;}
+  .panel.warn{border-color:rgba(255,203,107,.35); background:rgba(255,203,107,.06);}
+  .panel.warn h4{color:var(--amber);}
+  .panel.good{border-color:rgba(70,224,160,.3); background:rgba(70,224,160,.05);}
+  .panel.good h4{color:var(--ok);}
+  .panel ul{margin:0; padding-left:2px; list-style:none;}
+  .panel li{font-size:.82rem; color:var(--sub); line-height:1.65; padding-left:18px; position:relative;}
+  .panel li::before{content:"›"; position:absolute; left:4px; color:var(--mint);}
+  .panel li b{color:var(--txt);}
+
+  .seg-tabs{display:flex; gap:6px; background:var(--surface); border-radius:12px; padding:5px; margin:6px 0 16px; position:sticky; top:0; z-index:5;}
+  .seg-tabs button{flex:1; border:none; background:none; color:var(--sub); font-weight:600; font-size:.82rem;
+    padding:9px; border-radius:9px; cursor:pointer; font-family:inherit;}
+  .seg-tabs button.on{background:var(--surface2); color:var(--txt);}
+
+  .tl{position:relative; padding-left:24px;}
+  .tl::before{content:""; position:absolute; left:6px; top:6px; bottom:6px; width:2px; background:var(--line2);}
+  .tl-item{position:relative; padding:0 0 18px;}
+  .tl-item::before{content:""; position:absolute; left:-21px; top:5px; width:11px; height:11px; border-radius:50%;
+    background:var(--app); border:2px solid var(--grad2);}
+  .tl-item.move::before{border-color:var(--grad2);}
+  .tl-item.stay::before{border-color:#c79bff;}
+  .tl-item.food::before{border-color:var(--mint);}
+  .tl-time{font-size:.72rem; color:var(--mint); font-weight:700; font-variant-numeric:tabular-nums;}
+  .tl-card{background:var(--surface); border:1px solid var(--line); border-radius:12px; padding:12px 14px; margin-top:5px;
+    display:flex; justify-content:space-between; gap:10px;}
+  .tl-card .ti{font-weight:600; font-size:.92rem;}
+  .tl-card .de{font-size:.76rem; color:var(--sub); margin-top:3px; line-height:1.45;}
+  .tl-card .co{font-size:.8rem; font-weight:700; color:var(--txt); white-space:nowrap; align-self:center; font-variant-numeric:tabular-nums;}
+  .day-head{font-size:1rem; font-weight:700; margin:6px 0 12px; display:flex; align-items:center; gap:8px;}
+  .day-head .n{width:24px; height:24px; border-radius:8px; background:linear-gradient(135deg,var(--grad1),var(--grad2));
+    display:grid; place-items:center; font-size:.78rem; font-weight:800;}
+
+  .hidden{display:none !important;}
+  .fade{animation:fade .35s ease;}
+  @keyframes fade{from{opacity:0; transform:translateY(8px);}to{opacity:1; transform:none;}}
+</style>
+</head>
+<body>
+<div class="phone">
+  <div class="notch"></div>
+  <div class="statusbar"><span id="clock">9:41</span><span class="dots">●●●  Tabily  ▮▮▮</span></div>
+  <button class="nav-back" id="back">‹</button>
+
+  <div class="screen">
+    <div class="scroll" id="scroll">
+      <div class="brand">
+        <div class="logo">✈️</div>
+        <div><h1>Tabily</h1><div class="sub">みんなの旅、ひとつのプランに。</div></div>
+      </div>
+      <div class="steps" id="steps">
+        <div class="s on"></div><div class="s"></div><div class="s"></div><div class="s"></div>
+      </div>
+      <div id="stage"></div>
+    </div>
+
+    <!-- loading overlay -->
+    <div id="loading">
+      <div class="orbit"><div class="ring"></div><div class="core"></div></div>
+      <div style="text-align:center">
+        <div class="lt">グループ最適化中…</div>
+        <div class="ls" id="lstep">全員の出発地を分析しています</div>
+      </div>
+    </div>
+
+    <!-- bottom CTA -->
+    <div class="footer-cta" id="cta">
+      <div class="btn-row">
+        <button class="btn btn-primary" id="next">次へ</button>
+      </div>
+    </div>
+  </div>
+</div>
+
+<script>
+//============ DATA & ENGINE (前回ロジックを継承) ============
+const DEST = {
+  "京都":{emoji:"⛩️",hub:"京都駅",food:{朝:600,昼:1200,夜:2800},stay:8000,spots:["伏見稲荷大社","清水寺・産寧坂","嵐山 竹林の道","錦市場","金閣寺","祇園・花見小路"]},
+  "沖縄":{emoji:"🏝️",hub:"那覇空港",food:{朝:700,昼:1300,夜:3200},stay:9500,spots:["国際通り","首里城公園","美ら海水族館","古宇利島ドライブ","第一牧志公設市場","瀬長島ウミカジテラス"]},
+  "札幌":{emoji:"🐻",hub:"札幌駅",food:{朝:700,昼:1400,夜:3500},stay:9000,spots:["大通公園・時計台","白い恋人パーク","小樽運河","二条市場","藻岩山 夜景","サッポロビール園"]},
+  "福岡":{emoji:"🍜",hub:"博多駅",food:{朝:600,昼:1100,夜:3000},stay:7500,spots:["太宰府天満宮","中洲 屋台街","大濠公園","キャナルシティ博多","糸島ドライブ","櫛田神社"]},
+  "東京":{emoji:"🗼",hub:"東京駅",food:{朝:700,昼:1300,夜:3300},stay:11000,spots:["浅草・雷門","渋谷スクランブル","チームラボ","上野公園","豊洲市場","お台場海浜公園"]},
+  "大阪":{emoji:"🐙",hub:"新大阪駅",food:{朝:600,昼:1200,夜:2900},stay:8000,spots:["大阪城公園","道頓堀・グリコ","海遊館","新世界・通天閣","梅田スカイビル","黒門市場"]},
+};
+const ORIGINS=["東京","横浜","名古屋","大阪","京都","神戸","福岡","札幌","仙台","広島"];
+function travel(o,d){
+  if(o===d) return {cost:800,hours:.5};
+  const base={"京都":480,"沖縄":1200,"札幌":1100,"福岡":900,"東京":500,"大阪":420};
+  const f={"東京":1,"横浜":1,"名古屋":.7,"大阪":.45,"京都":.4,"神戸":.5,"福岡":.9,"札幌":1,"仙台":.85,"広島":.7};
+  const km=(base[d]||600)*(f[o]??1);
+  return {cost:Math.max(900,Math.round(km*18/100)*100), hours:Math.max(.5,Math.round(km/180*10)/10)};
+}
+const yen=n=>"¥"+Math.round(n).toLocaleString("ja-JP");
+const AV=["#7c5cff","#4d8bff","#3fe0c5","#ff6b8a","#ffcb6b","#c79bff","#5ad1ff"];
+
+//============ STATE ============
+const state={ dest:"京都", days:2, budget:35000, theme:"観光重視",
+  members:[{name:"たろう",origin:"東京"},{name:"はなこ",origin:"大阪"},{name:"けん",origin:"福岡"}] };
+let step=0;
+const stage=document.getElementById("stage");
+const nextBtn=document.getElementById("next");
+const backBtn=document.getElementById("back");
+const steps=[...document.querySelectorAll("#steps .s")];
+
+//============ RENDER STEPS ============
+function setSteps(){ steps.forEach((s,i)=> s.classList.toggle("on", i<=step)); }
+
+function render(){
+  setSteps();
+  backBtn.style.display = step>0 ? "flex":"none";
+  document.getElementById("scroll").scrollTop=0;
+  stage.className="fade"; void stage.offsetWidth; stage.className="fade";
+  if(step===0) renderDest();
+  if(step===1) renderTrip();
+  if(step===2) renderBudget();
+  if(step===3) renderMembers();
+  nextBtn.textContent = step===3 ? "🎒 プランを作成" : "次へ";
+}
+
+function renderDest(){
+  stage.innerHTML=`<p class="eyebrow">STEP 1 / 4</p>
+   <h2 class="qtitle">どこへ行く？</h2>
+   <p class="qhint">グループみんなで訪れる目的地を選んでください。</p>
+   <div class="seg cols2" id="destSeg"></div>`;
+  const seg=document.getElementById("destSeg");
+  Object.entries(DEST).forEach(([k,v])=>{
+    const el=document.createElement("div");
+    el.className="opt"+(state.dest===k?" sel":"");
+    el.innerHTML=`<div class="ic">${v.emoji}</div><div class="tx"><div class="t">${k}</div><div class="d">${v.hub}</div></div><div class="check">✓</div>`;
+    el.onclick=()=>{ state.dest=k; renderDest(); };
+    seg.appendChild(el);
+  });
+}
+function renderTrip(){
+  const opts=[[1,"日帰り","🌅","朝出発・夜帰着"],[2,"1泊2日","🌙","定番の週末旅"],[3,"2泊3日","🌄","ゆったり満喫"],[4,"3泊4日","🏖️","遠方・周遊向け"]];
+  const themes=[["観光重視","🗺️","名所めぐり"],["グルメ","🍽️","食べ歩き中心"],["のんびり","♨️","温泉・癒し"],["アクティブ","🚣","体験・自然"]];
+  stage.innerHTML=`<p class="eyebrow">STEP 2 / 4</p>
+   <h2 class="qtitle">日数とテーマ</h2>
+   <p class="qhint">旅のスタイルに合わせてプランの密度を調整します。</p>
+   <div class="seg cols2" id="daysSeg" style="margin-bottom:22px"></div>
+   <p class="eyebrow" style="color:var(--sub)">テーマ</p>
+   <div class="seg cols2" id="themeSeg"></div>`;
+  const ds=document.getElementById("daysSeg");
+  opts.forEach(([v,t,e,d])=>{ const el=document.createElement("div");
+    el.className="opt"+(state.days===v?" sel":"");
+    el.innerHTML=`<div class="ic">${e}</div><div class="tx"><div class="t">${t}</div><div class="d">${d}</div></div><div class="check">✓</div>`;
+    el.onclick=()=>{ state.days=v; renderTrip(); }; ds.appendChild(el); });
+  const ts=document.getElementById("themeSeg");
+  themes.forEach(([v,e,d])=>{ const el=document.createElement("div");
+    el.className="opt"+(state.theme===v?" sel":"");
+    el.innerHTML=`<div class="ic">${e}</div><div class="tx"><div class="t">${v}</div><div class="d">${d}</div></div><div class="check">✓</div>`;
+    el.onclick=()=>{ state.theme=v; renderTrip(); }; ts.appendChild(el); });
+}
+function renderBudget(){
+  stage.innerHTML=`<p class="eyebrow">STEP 3 / 4</p>
+   <h2 class="qtitle">一人あたりの予算</h2>
+   <p class="qhint">この金額を上限に、移動・宿・食事を最適配分します。</p>
+   <div class="budget-display"><div class="amt" id="bamt">${yen(state.budget)}</div><div class="per">/ 一人あたり</div></div>
+   <input type="range" id="brange" min="10000" max="100000" step="1000" value="${state.budget}">
+   <div class="range-ends"><span>¥10,000</span><span>¥100,000</span></div>
+   <div class="panel" style="margin-top:24px"><h4>💡 グループ予算のポイント</h4>
+     <ul><li><b>合計予算</b>と<b>一人上限</b>を同時にチェック</li>
+     <li>出発地による移動費の差は<b>割り勘プール</b>で公平化</li></ul></div>`;
+  const r=document.getElementById("brange"), a=document.getElementById("bamt");
+  const fill=()=>r.style.setProperty("--fill",((r.value-r.min)/(r.max-r.min)*100)+"%");
+  fill();
+  r.oninput=()=>{ state.budget=+r.value; a.textContent=yen(state.budget); fill(); };
+}
+function renderMembers(){
+  stage.innerHTML=`<p class="eyebrow">STEP 4 / 4</p>
+   <h2 class="qtitle">メンバーと出発地</h2>
+   <p class="qhint">出発地がバラバラでもOK。合流地点を自動で最適化します。</p>
+   <div id="mlist"></div>
+   <button class="add-m" id="addM">＋ メンバーを追加</button>`;
+  drawMembers();
+  document.getElementById("addM").onclick=()=>{ state.members.push({name:"",origin:"東京"}); drawMembers(); };
+}
+function drawMembers(){
+  const list=document.getElementById("mlist"); list.innerHTML="";
+  state.members.forEach((m,i)=>{
+    const row=document.createElement("div"); row.className="member";
+    const initial=(m.name||"?").slice(0,1);
+    row.innerHTML=`<div class="avatar" style="background:${AV[i%AV.length]}">${initial}</div>
+      <div class="f"><input class="nm" value="${m.name}" placeholder="名前を入力">
+        <div class="city">📍 出発地：<select>${ORIGINS.map(o=>`<option ${o===m.origin?"selected":""}>${o}</option>`).join("")}</select></div></div>
+      ${state.members.length>1?'<button class="del">✕</button>':''}`;
+    const nm=row.querySelector(".nm"), av=row.querySelector(".avatar"), sel=row.querySelector("select");
+    nm.oninput=()=>{ m.name=nm.value; av.textContent=(nm.value||"?").slice(0,1); };
+    sel.onchange=()=>{ m.origin=sel.value; };
+    const del=row.querySelector(".del"); if(del) del.onclick=()=>{ state.members.splice(i,1); drawMembers(); };
+    list.appendChild(row);
+  });
+}
+
+//============ NAV ============
+nextBtn.onclick=()=>{ if(step<3){ step++; render(); } else generate(); };
+backBtn.onclick=()=>{ if(step>0){ step--; render(); } };
+
+//============ GENERATE ============
+function generate(){
+  const ld=document.getElementById("loading"); ld.style.display="flex";
+  const msgs=["全員の出発地を分析しています","最適な合流地点を計算中","予算を移動・宿・食事に配分","人数分の宿・食事を確保","タイムラインを組み立て中"];
+  let i=0; const ls=document.getElementById("lstep");
+  const iv=setInterval(()=>{ i++; if(i<msgs.length) ls.textContent=msgs[i]; },520);
+  setTimeout(()=>{ clearInterval(iv); ld.style.display="none"; buildResult(); }, 2900);
+}
+
+function buildResult(){
+  const dest=state.dest, days=state.days, budget=state.budget, theme=state.theme, D=DEST[dest];
+  const members=state.members.map(m=>({name:m.name||"名無し",origin:m.origin}));
+  const n=members.length;
+  const legs=members.map(m=>{ const t=travel(m.origin,dest); return {...m,...t,round:t.cost*2}; });
+  const slowest=legs.reduce((a,b)=>b.hours>a.hours?b:a);
+  const meetHour=Math.min(13,Math.round(9+slowest.hours)); const meetTime=String(meetHour).padStart(2,"0")+":00";
+  const nights=Math.max(0,days-1);
+  const stayPer=D.stay*nights, foodPer=days*(D.food.朝+D.food.昼+D.food.夜)*0.9;
+  const activityPer=(theme==="アクティブ"?3000:theme==="グルメ"?1500:1200)*days;
+  const perEstimate=stayPer+foodPer+activityPer;
+  const totalMove=legs.reduce((s,l)=>s+l.round,0);
+  const fairPerPerson=perEstimate+totalMove/n;
+  const totalBudget=budget*n, totalEstimate=perEstimate*n+totalMove;
+  const overPer=fairPerPerson>budget, overTotal=totalEstimate>totalBudget;
+
+  const spots=[...D.spots]; const pick=k=>spots.splice(0,k);
+  const dayEvents=[];
+  for(let d=1; d<=days; d++){ const ev=[];
+    if(d===1){
+      ev.push(["~"+meetTime,"🚉 "+D.hub+"に集合","最も遠い"+slowest.name+"さん("+slowest.origin+")基準。早い人はカフェで待機","move",slowest.round]);
+      ev.push([meetTime,"🍱 合流ランチ",D.hub+"周辺で全員集合の昼食","food",D.food.昼]);
+      pick(2).forEach((s,k)=>ev.push([["14:00","16:00"][k],"📍 "+s,theme+"の定番スポット","",0]));
+      ev.push(["18:30","🍽 歓迎ディナー",n+"名で個室予約推奨","food",D.food.夜]);
+      if(nights>0) ev.push(["20:30","🏨 宿泊",n+"名 / "+(n>=4?"2部屋以上":"1〜2部屋")+"・予算重視","stay",D.stay]);
+    } else if(d===days){
+      ev.push(["08:00","🍳 朝食 → チェックアウト","荷物は預けて身軽に","food",D.food.朝]);
+      pick(2).forEach((s,k)=>ev.push([["09:30","11:30"][k],"📍 "+s,D.hub+"寄りを優先","",0]));
+      ev.push(["13:00","🍜 解散ランチ","最後の食事→各自の出発地へ","food",D.food.昼]);
+      ev.push(["14:30","🚉 "+D.hub+"で解散","出発地別に分かれて帰路","move",0]);
+    } else {
+      ev.push(["08:30","🍳 朝食","宿またはモーニング","food",D.food.朝]);
+      pick(3).forEach((s,k)=>ev.push([["10:00","13:00","15:30"][k],"📍 "+s,k===1?"途中ランチ込み":theme+"を満喫","",0]));
+      ev.push(["19:00","🍽 夕食","みんなで郷土料理","food",D.food.夜]);
+      if(d<days&&nights>0) ev.push(["21:00","🏨 宿泊",n+"名 / 連泊","stay",D.stay]);
+    }
+    dayEvents.push(ev);
+  }
+  drawResult({dest,days,n,theme,budget,totalBudget,totalEstimate,fairPerPerson,overPer,overTotal,legs,slowest,meetTime,totalMove,dayEvents,D,nights});
+}
+
+function drawResult(x){
+  document.getElementById("steps").classList.add("hidden");
+  document.querySelector(".brand").classList.add("hidden");
+  const cta=document.getElementById("cta");
+  cta.innerHTML=`<button class="btn btn-primary" id="restart">条件を変えてやり直す</button>`;
+  document.getElementById("restart").onclick=()=>location.reload();
+  backBtn.style.display="none";
+
+  const moveList=x.legs.map(l=>`<li><b>${l.name}</b>（${l.origin}）— 片道約${l.hours}h・往復 ${yen(l.round)}</li>`).join("");
+  const tabBtns=x.dayEvents.map((_,i)=>`<button data-d="${i}" class="${i===0?'on':''}">${x.days===1?'日帰り':(i+1)+'日目'}</button>`).join("");
+  const dayHTML=x.dayEvents.map((ev,i)=>`
+    <div class="day-pane ${i===0?'':'hidden'}" data-pane="${i}">
+      <div class="day-head"><span class="n">${i+1}</span>${x.days===1?'日帰りプラン':(i+1===x.days?'最終日':(i+1)+'日目')}</div>
+      <div class="tl">${ev.map(e=>`
+        <div class="tl-item ${e[3]}">
+          <div class="tl-time">${e[0]}</div>
+          <div class="tl-card"><div><div class="ti">${e[1]}</div><div class="de">${e[2]}</div></div>
+          ${e[4]?`<div class="co">${yen(e[4])}</div>`:''}</div>
+        </div>`).join("")}</div>
+    </div>`).join("");
+
+  stage.innerHTML=`
+    <div class="hero">
+      <h2 class="dest">${x.D.emoji} ${x.dest}</h2>
+      <div class="meta">${x.days===1?'日帰り':x.days-1+'泊'+x.days+'日'} ・ ${x.n}名グループ ・ ${x.theme}</div>
+      <div class="pills"><span class="pill">📍 ${x.D.hub} 集合 ${x.meetTime}</span><span class="pill">👥 ${x.n}名</span></div>
+    </div>
+    <div class="stat-row">
+      <div class="scard ${x.overTotal?'alert':'good'}"><div class="v">${yen(x.totalEstimate)}</div><div class="l">合計見込み<br>予算 ${yen(x.totalBudget)}</div></div>
+      <div class="scard ${x.overPer?'alert':'good'}"><div class="v">${yen(x.fairPerPerson)}</div><div class="l">割り勘 一人<br>上限 ${yen(x.budget)}</div></div>
+    </div>
+
+    <div class="panel"><h4>🤝 合流の最適化</h4><ul>${moveList}</ul>
+      <p style="font-size:.78rem;color:var(--sub);margin:10px 0 0;line-height:1.6">集合は最も遠い <b style="color:var(--txt)">${x.slowest.name}さん（${x.slowest.origin}）</b> 基準で <b style="color:var(--mint)">${x.meetTime}</b>。移動費合計 ${yen(x.totalMove)} を割り勘すると一人 ${yen(x.totalMove/x.n)}。</p>
+    </div>
+
+    ${(x.overPer||x.overTotal)?`<div class="panel warn"><h4>⚠️ 予算調整のおすすめ</h4><ul>
+      ${x.overTotal?`<li>合計が <b>${yen(x.totalEstimate-x.totalBudget)}</b> 超過。相部屋で約 ${yen(x.D.stay*0.3*x.nights*x.n)} 削減可。</li>`:''}
+      <li>夕食を1回カジュアルにして一人約 ${yen(x.D.food.夜*0.4)} 圧縮。</li>
+      <li>遠方メンバーは早割・夜行便で移動費を最大30%カット。</li></ul></div>`:
+      `<div class="panel good"><h4>✅ 予算内に収まっています</h4><ul><li>余裕 一人約 <b>${yen(x.budget-x.fairPerPerson)}</b>。体験や手土産に回せます。</li></ul></div>`}
+
+    <div class="seg-tabs" id="tabs">${tabBtns}</div>
+    <div id="days">${dayHTML}</div>
+  `;
+  const tabs=stage.querySelector("#tabs");
+  tabs.querySelectorAll("button").forEach(b=>b.onclick=()=>{
+    tabs.querySelectorAll("button").forEach(x=>x.classList.remove("on")); b.classList.add("on");
+    stage.querySelectorAll(".day-pane").forEach(p=>p.classList.add("hidden"));
+    stage.querySelector(`[data-pane="${b.dataset.d}"]`).classList.remove("hidden");
+  });
+}
+
+//============ clock ============
+function tick(){ const d=new Date(); document.getElementById("clock").textContent=d.getHours()+":"+String(d.getMinutes()).padStart(2,"0"); }
+tick(); setInterval(tick,30000);
+
+render();
+</script>
+</body>
+</html>
