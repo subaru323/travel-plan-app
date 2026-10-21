@@ -4,35 +4,10 @@ import {
   SafeAreaView, ScrollView, StyleSheet, Text, TextInput, View,
   TouchableOpacity, Pressable, Modal,
 } from 'react-native';
+import { DEST, REGIONS, ORIGIN_COORDS } from './prefectures';
 
 //============ DATA & ENGINE ============
-const DEST = {
-  "京都": { emoji: "⛩️", hub: "京都駅", food: { 朝: 600, 昼: 1200, 夜: 2800 }, stay: 8000,
-    spots: ["伏見稲荷大社", "清水寺・産寧坂", "嵐山 竹林の道", "錦市場", "金閣寺", "祇園・花見小路"],
-    desc: "千年の古都。神社仏閣・庭園が密集し、徒歩＋バスで効率よく巡れる。外国人観光客が多く混雑シーズンは早朝行動が鍵。",
-    bestSeason: "3〜4月(桜)・11月(紅葉)", avgTemp: "春/秋 12〜20℃", tags: ["歴史・寺社", "写真映え", "着物体験"] },
-  "沖縄": { emoji: "🏝️", hub: "那覇空港", food: { 朝: 700, 昼: 1300, 夜: 3200 }, stay: 9500,
-    spots: ["国際通り", "首里城公園", "美ら海水族館", "古宇利島ドライブ", "第一牧志公設市場", "瀬長島ウミカジテラス"],
-    desc: "南国リゾート。海・水族館が中心で移動はレンタカー推奨。台風シーズン(8〜9月)は天候リスクあり。",
-    bestSeason: "4〜6月・10〜11月", avgTemp: "年間20〜31℃", tags: ["海・リゾート", "ダイビング", "レンタカー移動"] },
-  "札幌": { emoji: "🐻", hub: "札幌駅", food: { 朝: 700, 昼: 1400, 夜: 3500 }, stay: 9000,
-    spots: ["大通公園・時計台", "白い恋人パーク", "小樽運河", "二条市場", "藻岩山 夜景", "サッポロビール園"],
-    desc: "食とビール、雪景色が魅力。冬は雪祭り(2月)で混雑・防寒必須。小樽まで足を伸ばすなら電車で約30分。",
-    bestSeason: "6〜8月(避暑)・2月(雪祭り)", avgTemp: "夏 22℃前後・冬 -4℃前後", tags: ["グルメ", "雪景色", "ビール・海鮮"] },
-  "福岡": { emoji: "🍜", hub: "博多駅", food: { 朝: 600, 昼: 1100, 夜: 3000 }, stay: 7500,
-    spots: ["太宰府天満宮", "中洲 屋台街", "大濠公園", "キャナルシティ博多", "糸島ドライブ", "櫛田神社"],
-    desc: "コンパクトで移動しやすく物価も控えめ。屋台文化と博多グルメが人気。空港から市街地まで地下鉄で約5分。",
-    bestSeason: "4〜5月・10〜11月", avgTemp: "春/秋 14〜22℃", tags: ["屋台グルメ", "コンパクト", "コスパ良好"] },
-  "東京": { emoji: "🗼", hub: "東京駅", food: { 朝: 700, 昼: 1300, 夜: 3300 }, stay: 11000,
-    spots: ["浅草・雷門", "渋谷スクランブル", "チームラボ", "上野公園", "豊洲市場", "お台場海浜公園"],
-    desc: "都市型観光の代表格。交通網が発達し電車移動が基本。エリアごとに雰囲気が大きく異なる。宿泊費はやや高め。",
-    bestSeason: "通年・特に3〜5月/10〜11月", avgTemp: "春/秋 13〜22℃", tags: ["都市観光", "ショッピング", "最新スポット"] },
-  "大阪": { emoji: "🐙", hub: "新大阪駅", food: { 朝: 600, 昼: 1200, 夜: 2900 }, stay: 8000,
-    spots: ["大阪城公園", "道頓堀・グリコ", "海遊館", "新世界・通天閣", "梅田スカイビル", "黒門市場"],
-    desc: "食い倒れの街。庶民的で活気があり、道頓堀周辺は徒歩で楽しめる。USJ目的なら宿は西九条・弁天町が便利。",
-    bestSeason: "3〜5月・10〜11月", avgTemp: "春/秋 14〜22℃", tags: ["粉もの・グルメ", "テーマパーク", "活気ある街"] },
-};
-const ORIGINS = ["東京", "横浜", "名古屋", "大阪", "京都", "神戸", "福岡", "札幌", "仙台", "広島"];
+const ORIGINS = Object.keys(ORIGIN_COORDS);
 const AV = ["#7c5cff", "#4d8bff", "#3fe0c5", "#ff6b8a", "#ffcb6b", "#c79bff", "#5ad1ff"];
 const PRIORITIES = [
   { key: "観光重視", icon: "🗺️", desc: "名所めぐり" },
@@ -45,12 +20,18 @@ const PRIORITIES = [
   { key: "夜も楽しむ", icon: "🌃", desc: "ナイトスポット" },
 ];
 
+// 出発地→目的地ハブの移動。直線距離×1.25を経路距離とし、700km超は飛行機想定で概算する
 function travel(o, d) {
-  if (o === d) return { cost: 800, hours: 0.5 };
-  const base = { "京都": 480, "沖縄": 1200, "札幌": 1100, "福岡": 900, "東京": 500, "大阪": 420 };
-  const f = { "東京": 1, "横浜": 1, "名古屋": .7, "大阪": .45, "京都": .4, "神戸": .5, "福岡": .9, "札幌": 1, "仙台": .85, "広島": .7 };
-  const km = (base[d] || 600) * (f[o] ?? 1);
-  return { cost: Math.max(900, Math.round(km * 18 / 100) * 100), hours: Math.max(0.5, Math.round(km / 180 * 10) / 10) };
+  const [lat1, lon1] = ORIGIN_COORDS[o];
+  const { lat: lat2, lon: lon2 } = DEST[d];
+  const rad = x => x * Math.PI / 180;
+  const a = Math.sin(rad(lat2 - lat1) / 2) ** 2 + Math.cos(rad(lat1)) * Math.cos(rad(lat2)) * Math.sin(rad(lon2 - lon1) / 2) ** 2;
+  const km = 6371 * 2 * Math.asin(Math.sqrt(a)) * 1.25;
+  if (km < 20) return { cost: 800, hours: 0.5 };
+  const flight = km > 700;
+  const cost = flight ? 12000 + km * 12 : km * 25;
+  const hours = flight ? 1.5 + km / 700 : 0.3 + km / 200;
+  return { cost: Math.max(900, Math.round(cost / 100) * 100), hours: Math.round(hours * 10) / 10 };
 }
 const yen = n => "¥" + Math.round(n).toLocaleString("ja-JP");
 
@@ -107,8 +88,10 @@ function buildPlan(state) {
 //============ UI ============
 export default function App() {
   const [step, setStep] = useState(0); // 0-3 wizard, 4 loading, 5 result
-  const [dest, setDest] = useState("京都");
+  const [dest, setDest] = useState("京都府");
   const [detailDest, setDetailDest] = useState(null);
+  const [region, setRegion] = useState("すべて");
+  const [destQuery, setDestQuery] = useState("");
   const [days, setDays] = useState(2);
   const [priorities, setPriorities] = useState(["観光重視"]);
   const [note, setNote] = useState("");
@@ -119,6 +102,11 @@ export default function App() {
   const [plan, setPlan] = useState(null);
   const [activeDay, setActiveDay] = useState(0);
   const [loadingText, setLoadingText] = useState("");
+
+  const q = destQuery.trim();
+  const visibleDests = Object.entries(DEST).filter(([k, v]) =>
+    (region === "すべて" || v.region === region) &&
+    (!q || [k, v.hub, ...v.tags, ...v.spots].some(t => t.includes(q))));
 
   const togglePriority = key => setPriorities(ps => ps.includes(key) ? ps.filter(p => p !== key) : [...ps, key]);
   const updateMember = (i, patch) => setMembers(ms => ms.map((m, idx) => (idx === i ? { ...m, ...patch } : m)));
@@ -178,9 +166,25 @@ export default function App() {
             <View>
               <Text style={s.eyebrow}>STEP 1 / 4</Text>
               <Text style={s.qtitle}>どこへ行く？</Text>
-              <Text style={s.qhint}>気になる目的地は「ⓘ」で詳しく調べられます。</Text>
+              <Text style={s.qhint}>47都道府県から選べます。気になる目的地は「ⓘ」で詳しく調べられます。</Text>
+              <TextInput
+                style={s.searchInput}
+                value={destQuery}
+                onChangeText={setDestQuery}
+                placeholder="🔍 都道府県・スポット・タグで検索"
+                placeholderTextColor="#5b6090"
+              />
+              <ScrollView horizontal showsHorizontalScrollIndicator={false} style={s.regionRow} contentContainerStyle={{ gap: 6 }}>
+                {["すべて", ...REGIONS].map(r => (
+                  <Pressable key={r} onPress={() => setRegion(r)} style={[s.chip, s.regionChip, region === r && s.chipOn]}>
+                    <Text style={[s.chipTxt, region === r && s.chipTxtOn]}>{r}</Text>
+                  </Pressable>
+                ))}
+              </ScrollView>
+              <Text style={s.selectedTxt}>選択中：{DEST[dest].emoji} {dest}</Text>
               <View style={s.grid2}>
-                {Object.entries(DEST).map(([k, v]) => (
+                {visibleDests.length === 0 && <Text style={s.qhint}>該当する目的地がありません。</Text>}
+                {visibleDests.map(([k, v]) => (
                   <View key={k} style={{ width: "47%" }}>
                     <OptCard selected={dest === k} icon={v.emoji} title={k} desc={v.hub} onPress={() => setDest(k)} />
                     <Pressable style={s.infoBtn} onPress={() => setDetailDest(k)}>
@@ -473,6 +477,11 @@ const s = StyleSheet.create({
   optTitle: { color: "#f2f4ff", fontWeight: "600", fontSize: 14 },
   optDesc: { color: "#8b91bd", fontSize: 11, marginTop: 2 },
   optCheck: { width: 18, height: 18, borderRadius: 9, backgroundColor: "#4d8bff", alignItems: "center", justifyContent: "center" },
+  searchInput: { color: "#f2f4ff", fontSize: 14, backgroundColor: "#171a2e", borderWidth: 1, borderColor: "rgba(255,255,255,.1)",
+    borderRadius: 12, paddingVertical: 10, paddingHorizontal: 14, marginBottom: 10 },
+  regionRow: { marginBottom: 10, flexGrow: 0 },
+  regionChip: { paddingHorizontal: 12, paddingVertical: 7 },
+  selectedTxt: { color: "#3fe0c5", fontSize: 12, fontWeight: "600", marginBottom: 10 },
   infoBtn: { alignItems: "center", paddingVertical: 6 },
   infoBtnTxt: { color: "#3fe0c5", fontSize: 11, fontWeight: "600" },
 
